@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subnetting & IP Adresy - Procvičování</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#2563eb',
+                            600: '#1d4ed8',
+                            700: '#1e40af',
+                            800: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom styled input octets */
+        .octet-input {
+            width: 3.2rem;
+            text-align: center;
+            border-bottom: 2px solid #cbd5e1;
+            transition: all 0.2s ease;
+        }
+        .octet-input:focus {
+            outline: none;
+            border-bottom-color: #2563eb;
+            background-color: #eff6ff;
+        }
+        .octet-input.correct {
+            border-bottom-color: #22c55e;
+            background-color: #f0fdf4;
+            color: #15803d;
+            font-weight: 600;
+        }
+        .octet-input.incorrect {
+            border-bottom-color: #ef4444;
+            background-color: #fef2f2;
+            color: #b91c1c;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 bg-slate-50 pb-12">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-network-wired text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 leading-tight">Subnetting Trainer PRO</h1>
+                    <p class="text-xs text-slate-500">Určování síťových parametrů, typů IP & platností hostů</p>
+                </div>
+            </div>
+
+            <!-- Mode Tabs -->
+            <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-sm font-medium">
+                <button id="tab-interactive" onclick="switchMode('interactive')" class="px-4 py-1.5 rounded-lg transition-all shadow-sm bg-white text-blue-600 font-semibold">
+                    <i class="fa-solid fa-list-check mr-1.5"></i> Interaktivní dril
+                </button>
+                <button id="tab-table" onclick="switchMode('table')" class="px-4 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900">
+                    <i class="fa-solid fa-table mr-1.5"></i> Tabulkový test (10 příkladů)
+                </button>
+                <button id="tab-calculator" onclick="switchMode('calculator')" class="px-4 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900">
+                    <i class="fa-solid fa-calculator mr-1.5"></i> Kalkulátor & Tahák
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+
+        <section id="view-interactive" class="space-y-6">
+            
+            <!-- Target IP Bar -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center space-x-3 w-full md:w-auto">
+                    <span class="text-slate-600 font-medium text-sm whitespace-nowrap">Zadaná IP adresa:</span>
+                    <div class="flex items-center bg-blue-50/80 border-2 border-blue-200 px-4 py-2 rounded-xl text-blue-900 font-mono text-xl font-bold tracking-wide">
+                        <span id="target-ip-display">197 . 240 . 201 . 173</span>
+                        <span class="text-blue-500 font-semibold ml-2">/</span>
+                        <span id="target-prefix-display" class="text-blue-600">27</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
+                    <!-- Difficulty / Filter -->
+                    <select id="difficulty-select" onchange="generateNewProblem()" class="bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-xl px-3 py-2.5 font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="mix">Všechny masky + speciální IP</option>
+                        <option value="standard">Běžný subnetting (/24 - /30)</option>
+                        <option value="large">Velké sítě (/8 - /23)</option>
+                        <option value="rfc">Test RFC1918 & Speciální (Loopback, APIPA)</option>
+                    </select>
+
+                    <button onclick="generateNewProblem()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center space-x-2">
+                        <span>Další příklad</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Practice Table Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[700px]">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                <th class="py-3.5 px-6 w-1/4">Parametr</th>
+                                <th class="py-3.5 px-6 w-2/5">Váš tip / Odpověď</th>
+                                <th class="py-3.5 px-6 text-center w-28">Správně?</th>
+                                <th class="py-3.5 px-6 w-1/3">Správná odpověď</th>
+                                <th class="py-3.5 px-6 text-right w-24">Akce</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-sm font-medium text-slate-700">
+                            
+                            <!-- Row 1: Network ID -->
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="py-4 px-6 font-semibold text-slate-900">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fa-solid fa-sitemap text-blue-500 w-4"></i>
+                                        <span>Síťová adresa (Net-ID)</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-1 font-mono text-base" id="input-container-net">
+                                        <!-- Octet Inputs Generated via JS -->
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6 text-center" id="status-net">
+                                    <span class="text-slate-300 font-bold">—</span>
+                                </td>
+                                <td class="py-4 px-6 font-mono text-slate-500" id="answer-net">
+                                    <span class="text-slate-300 italic">skryto</span>
+                                </td>
+                                <td class="py-4 px-6 text-right">
+                                    <button onclick="toggleAnswer('net')" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Odhalit</button>
+                                </td>
+                            </tr>
+
+                            <!-- Row 2: First Host -->
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="py-4 px-6 font-semibold text-slate-900">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fa-solid fa-play text-emerald-500 w-4 text-xs"></i>
+                                        <span>1. Host (První použitelný)</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-1 font-mono text-base" id="input-container-first">
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6 text-center" id="status-first">
+                                    <span class="text-slate-300 font-bold">—</span>
+                                </td>
+                                <td class="py-4 px-6 font-mono text-slate-500" id="answer-first">
+                                    <span class="text-slate-300 italic">skryto</span>
+                                </td>
+                                <td class="py-4 px-6 text-right">
+                                    <button onclick="toggleAnswer('first')" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Odhalit</button>
+                                </td>
+                            </tr>
+
+                            <!-- Row 3: Last Host -->
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="py-4 px-6 font-semibold text-slate-900">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fa-solid fa-flag-checkered text-amber-500 w-4 text-xs"></i>
+                                        <span>Poslední Host (Posl. Host)</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-1 font-mono text-base" id="input-container-last">
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6 text-center" id="status-last">
+                                    <span class="text-slate-300 font-bold">—</span>
+                                </td>
+                                <td class="py-4 px-6 font-mono text-slate-500" id="answer-last">
+                                    <span class="text-slate-300 italic">skryto</span>
+                                </td>
+                                <td class="py-4 px-6 text-right">
+                                    <button onclick="toggleAnswer('last')" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Odhalit</button>
+                                </td>
+                            </tr>
+
+                            <!-- Row 4: Broadcast -->
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="py-4 px-6 font-semibold text-slate-900">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fa-solid fa-tower-broadcast text-purple-500 w-4"></i>
+                                        <span>Broadcast adresa</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-1 font-mono text-base" id="input-container-bcast">
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6 text-center" id="status-bcast">
+                                    <span class="text-slate-300 font-bold">—</span>
+                                </td>
+                                <td class="py-4 px-6 font-mono text-slate-500" id="answer-bcast">
+                                    <span class="text-slate-300 italic">skryto</span>
+                                </td>
+                                <td class="py-4 px-6 text-right">
+                                    <button onclick="toggleAnswer('bcast')" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Odhalit</button>
+                                </td>
+                            </tr>
+
+                            <!-- Row 5: Typ IP (RFC1918) -->
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="py-4 px-6 font-semibold text-slate-900">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fa-solid fa-shield-halved text-indigo-500 w-4"></i>
+                                        <span>Typ IP (RFC 1918 / Druh)</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <select id="user-type-select" class="bg-white border border-slate-300 text-slate-800 text-sm rounded-lg px-3 py-1.5 w-full max-w-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <option value="">-- Vyberte typ IP --</option>
+                                        <option value="RFC1918">Soukromá (RFC 1918)</option>
+                                        <option value="Veřejná">Veřejná (Public)</option>
+                                        <option value="Loopback">Loopback (127.0.0.0/8)</option>
+                                        <option value="APIPA">APIPA / Link-Local (169.254.0.0/16)</option>
+                                        <option value="Multicast">Multicast (Class D)</option>
+                                        <option value="Vyhrazená">Vyhrazená / Testovací</option>
+                                    </select>
+                                </td>
+                                <td class="py-4 px-6 text-center" id="status-type">
+                                    <span class="text-slate-300 font-bold">—</span>
+                                </td>
+                                <td class="py-4 px-6 font-medium text-slate-600" id="answer-type">
+                                    <span class="text-slate-300 italic">skryto</span>
+                                </td>
+                                <td class="py-4 px-6 text-right">
+                                    <button onclick="toggleAnswer('type')" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Odhalit</button>
+                                </td>
+                            </tr>
+
+                            <!-- Row 6: Platná host IP? -->
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="py-4 px-6 font-semibold text-slate-900">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fa-solid fa-circle-check text-teal-500 w-4"></i>
+                                        <span>Platná host IP?</span>
+                                        <span class="text-slate-400 text-xs cursor-help" title="Je zadaná IP adresa v dané síti použitelná pro koncový hostitelský počítač? (Nesmí to být síťová adresa, broadcast, loopback, multicast atd.)">
+                                            <i class="fa-solid fa-circle-question"></i>
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-6">
+                                        <label class="inline-flex items-center cursor-pointer">
+                                            <input type="radio" name="user-valid-host" value="ANO" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                            <span class="ml-2 font-semibold text-emerald-700">ANO</span>
+                                        </label>
+                                        <label class="inline-flex items-center cursor-pointer">
+                                            <input type="radio" name="user-valid-host" value="NE" class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                            <span class="ml-2 font-semibold text-rose-700">NE</span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6 text-center" id="status-valid">
+                                    <span class="text-slate-300 font-bold">—</span>
+                                </td>
+                                <td class="py-4 px-6 font-medium text-slate-600" id="answer-valid">
+                                    <span class="text-slate-300 italic">skryto</span>
+                                </td>
+                                <td class="py-4 px-6 text-right">
+                                    <button onclick="toggleAnswer('valid')" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Odhalit</button>
+                                </td>
+                            </tr>
+
+                            <!-- Row 7: Další podsíť (Optional extra parameter like image 2) -->
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="py-4 px-6 font-semibold text-slate-900">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fa-solid fa-forward text-slate-500 w-4"></i>
+                                        <span>Další podsíť (Next Subnet)</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-1 font-mono text-base" id="input-container-next">
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6 text-center" id="status-next">
+                                    <span class="text-slate-300 font-bold">—</span>
+                                </td>
+                                <td class="py-4 px-6 font-mono text-slate-500" id="answer-next">
+                                    <span class="text-slate-300 italic">skryto</span>
+                                </td>
+                                <td class="py-4 px-6 text-right">
+                                    <button onclick="toggleAnswer('next')" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Odhalit</button>
+                                </td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bottom Toolbar (Controls matching Image 2) -->
+                <div class="bg-slate-50 p-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="showAllAnswers()" class="bg-slate-700 hover:bg-slate-800 text-white font-medium px-4 py-2 rounded-xl text-sm transition-colors shadow-sm">
+                            <i class="fa-solid fa-eye mr-1.5"></i> Odhalit vše (Show All)
+                        </button>
+                        <button onclick="checkAllAnswers()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2 rounded-xl text-sm transition-colors shadow-md shadow-emerald-600/20">
+                            <i class="fa-solid fa-check-double mr-1.5"></i> Zkontrolovat vše (Check All)
+                        </button>
+                    </div>
+
+                    <div class="flex items-center space-x-6 text-sm text-slate-600">
+                        <label class="inline-flex items-center cursor-pointer select-none">
+                            <input type="checkbox" id="auto-fill-checkbox" onchange="handleAutoFillToggle()" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+                            <span class="ml-2 font-medium">Předvyplnit nezajímavé oktety</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer select-none">
+                            <input type="checkbox" id="auto-check-checkbox" onchange="toggleAutoCheck()" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+                            <span class="ml-2 font-medium">Automatická kontrola při psaní</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Explanation Card (Appears after Check All) -->
+            <div id="explanation-box" class="hidden bg-blue-50/80 border border-blue-200 rounded-2xl p-6 shadow-sm">
+                <h3 class="text-base font-bold text-blue-950 flex items-center mb-3">
+                    <i class="fa-solid fa-graduation-cap text-blue-600 mr-2 text-lg"></i>
+                    Vysvětlení výpočtu pro tuto IP
+                </h3>
+                <div id="explanation-content" class="text-sm text-slate-700 leading-relaxed space-y-2">
+                    <!-- Dynamic explanation text -->
+                </div>
+            </div>
+
+        </section>
+
+        <section id="view-table" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Pracovní list - IP Adresy & Subnetting</h2>
+                    <p class="text-sm text-slate-500">Vyplňte kompletní tabulku 10 příkladů stejně jako na písemném testu.</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="generateTableWorksheet()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors">
+                        <i class="fa-solid fa-rotate mr-1.5"></i> Vygenerovat nové zadání
+                    </button>
+                    <button onclick="gradeTableWorksheet()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors shadow-md shadow-emerald-600/20">
+                        <i class="fa-solid fa-graduation-cap mr-1.5"></i> Vyhodnotit test
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[900px]">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-xs font-bold uppercase text-slate-600">
+                                <th class="py-3 px-3 text-center w-12">#</th>
+                                <th class="py-3 px-4 w-44">IP / Prefix</th>
+                                <th class="py-3 px-4 w-44">Net-ID</th>
+                                <th class="py-3 px-4 w-44">1. Host</th>
+                                <th class="py-3 px-4 w-44">Posl. Host</th>
+                                <th class="py-3 px-4 w-44">Broadcast</th>
+                                <th class="py-3 px-4 w-40">Typ (RFC 1918)</th>
+                                <th class="py-3 px-3 text-center w-32">Platná host IP?</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-worksheet-body" class="divide-y divide-slate-200 text-sm">
+                            <!-- Dynamically generated rows via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Score Summary Modal/Box -->
+            <div id="table-score-card" class="hidden bg-white border border-slate-200 rounded-2xl p-6 shadow-md text-center">
+                <div class="inline-flex p-3 bg-blue-100 rounded-full text-blue-600 mb-3">
+                    <i class="fa-solid fa-award text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900" id="table-score-title">Výsledek testu</h3>
+                <p class="text-slate-600 mt-1" id="table-score-text">Získali jste 0 z 60 bodů (0%).</p>
+                <div id="table-score-details" class="mt-4 text-left text-sm bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1"></div>
+            </div>
+        </section>
+
+        <section id="view-calculator" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                <h2 class="text-lg font-bold text-slate-900 mb-2">Pravidla a Tahák pro Subnetting</h2>
+                <p class="text-sm text-slate-600 leading-relaxed mb-6">
+                    Rychlý přehled pro určování tříd IP adres, soukromých rozsahů podle RFC 1918 a výpočet platné hostitelské IP.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Card 1: RFC 1918 & Special IPs -->
+                    <div class="border border-slate-200 rounded-xl p-5 bg-slate-50/50">
+                        <h3 class="font-bold text-slate-900 text-base mb-3 flex items-center text-indigo-600">
+                            <i class="fa-solid fa-shield-halved mr-2"></i> Typy IP adres & RFC 1918
+                        </h3>
+                        <ul class="space-y-2 text-sm text-slate-700">
+                            <li class="p-2 bg-white rounded border border-slate-200">
+                                <strong class="text-indigo-900">Soukromé adresy (RFC 1918):</strong>
+                                <div class="font-mono text-xs text-slate-600 mt-1">
+                                    • 10.0.0.0 až 10.255.255.255 (/8)<br>
+                                    • 172.16.0.0 až 172.31.255.255 (/12)<br>
+                                    • 192.168.0.0 až 192.168.255.255 (/16)
+                                </div>
+                            </li>
+                            <li class="p-2 bg-white rounded border border-slate-200">
+                                <strong class="text-slate-900">Loopback (Smyčka):</strong>
+                                <span class="font-mono text-xs text-slate-600 block">127.0.0.0 /8 (např. 127.0.0.1, 127.1.1.1)</span>
+                            </li>
+                            <li class="p-2 bg-white rounded border border-slate-200">
+                                <strong class="text-slate-900">APIPA / Link-Local:</strong>
+                                <span class="font-mono text-xs text-slate-600 block">169.254.0.0 /16 (automatická adresa bez DHCP)</span>
+                            </li>
+                            <li class="p-2 bg-white rounded border border-slate-200">
+                                <strong class="text-slate-900">Multicast:</strong>
+                                <span class="font-mono text-xs text-slate-600 block">224.0.0.0 až 239.255.255.255 (Třída D)</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Card 2: Valid Host Rule -->
+                    <div class="border border-slate-200 rounded-xl p-5 bg-slate-50/50">
+                        <h3 class="font-bold text-slate-900 text-base mb-3 flex items-center text-teal-600">
+                            <i class="fa-solid fa-circle-check mr-2"></i> Kdy je IP adresa "Platná host IP"?
+                        </h3>
+                        <div class="space-y-3 text-sm text-slate-700">
+                            <p class="leading-relaxed">
+                                IP adresa je <strong>platnou hostitelskou IP</strong> (přiřaditelná pro PC, server, rozhraní routeru), pokud splňuje VŠECHNY tyto podmínky:
+                            </p>
+                            <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-1.5 text-xs font-medium">
+                                <div class="flex items-center text-emerald-700">
+                                    <i class="fa-solid fa-check text-xs mr-2"></i> Leží striktně MEZI Síťovou adresou a Broadcastem!
+                                </div>
+                                <div class="flex items-center text-rose-700">
+                                    <i class="fa-solid fa-xmark text-xs mr-2"></i> NESMÍ to být Síťová adresa (Net-ID)!
+                                </div>
+                                <div class="flex items-center text-rose-700">
+                                    <i class="fa-solid fa-xmark text-xs mr-2"></i> NESMÍ to být Broadcast adresa!
+                                </div>
+                                <div class="flex items-center text-rose-700">
+                                    <i class="fa-solid fa-xmark text-xs mr-2"></i> NESMÍ to být Loopback (127.x.x.x) ani Multicast!
+                                </div>
+                            </div>
+                            <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
+                                <strong>Pozor na chytáky v testech!</strong> Např. <code class="font-mono font-bold">11.0.7.255/21</code> vypadá jako broadcast (končí na 255), ale broadcast pro /21 je <code class="font-mono">11.0.7.255</code>? Ano! Takže <code class="font-mono">11.0.7.255</code> v /21 JE broadcast, tudíž to <strong>NENÍ</strong> platná host IP!
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let currentProblem = {
+            ip: [197, 240, 201, 173],
+            prefix: 27,
+            net: [197, 240, 201, 160],
+            first: [197, 240, 201, 161],
+            last: [197, 240, 201, 190],
+            bcast: [197, 240, 201, 191],
+            nextSubnet: [197, 240, 201, 192],
+            type: 'Veřejná',
+            isValidHost: 'ANO'
+        };
+
+        let autoCheckEnabled = false;
+        let autoFillNonInteresting = false;
+
+        // Custom practice cases including trick questions from worksheet image 1
+        const TRICK_PROBLEMS = [
+            { ip: [10, 0, 0, 0], prefix: 29 },
+            { ip: [126, 127, 128, 129], prefix: 29 },
+            { ip: [192, 168, 100, 129], prefix: 25 },
+            { ip: [11, 0, 7, 255], prefix: 21 },
+            { ip: [169, 254, 1, 1], prefix: 24 },
+            { ip: [127, 1, 1, 1], prefix: 8 },
+            { ip: [172, 16, 50, 10], prefix: 22 },
+            { ip: [10, 20, 30, 255], prefix: 24 },
+            { ip: [192, 168, 1, 0], prefix: 24 },
+            { ip: [8, 8, 8, 8], prefix: 30 }
+        ];
+
+        function ipToUint32(octets) {
+            return ((octets[0] << 24) | (octets[1] << 16) | (octets[2] << 8) | octets[3]) >>> 0;
+        }
+
+        function uint32ToIp(int32) {
+            return [
+                (int32 >>> 24) & 255,
+                (int32 >>> 16) & 255,
+                (int32 >>> 8) & 255,
+                int32 & 255
+            ];
+        }
+
+        function getMask32(prefix) {
+            return prefix === 0 ? 0 : (~0 << (32 - prefix)) >>> 0;
+        }
+
+        function determineIpType(ip) {
+            const [a, b, c, d] = ip;
+            
+            // Loopback 127.0.0.0/8
+            if (a === 127) return 'Loopback';
+
+            // APIPA / Link-Local 169.254.0.0/16
+            if (a === 169 && b === 254) return 'APIPA';
+
+            // Multicast 224.0.0.0 - 239.255.255.255
+            if (a >= 224 && a <= 239) return 'Multicast';
+
+            // RFC 1918 Private
+            // 10.0.0.0/8
+            if (a === 10) return 'RFC1918';
+            // 172.16.0.0/12 (172.16.0.0 - 172.31.255.255)
+            if (a === 172 && b >= 16 && b <= 31) return 'RFC1918';
+            // 192.168.0.0/16
+            if (a === 192 && b === 168) return 'RFC1918';
+
+            // Reserved / Experimental
+            if (a >= 240 || (a === 192 && b === 0 && c === 2) || (a === 198 && b === 51 && c === 100)) return 'Vyhrazená';
+
+            return 'Veřejná';
+        }
+
+        function calculateSubnetDetails(ip, prefix) {
+            const ip32 = ipToUint32(ip);
+            const mask32 = getMask32(prefix);
+            const net32 = (ip32 & mask32) >>> 0;
+            const bcast32 = (net32 | ~mask32) >>> 0;
+            const size = Math.pow(2, 32 - prefix);
+
+            let first32 = net32 + 1;
+            let last32 = bcast32 - 1;
+            let nextNet32 = (bcast32 + 1) >>> 0;
+
+            if (prefix >= 31) {
+                first32 = net32;
+                last32 = bcast32;
+            }
+
+            const net = uint32ToIp(net32);
+            const first = uint32ToIp(first32);
+            const last = uint32ToIp(last32);
+            const bcast = uint32ToIp(bcast32);
+            const nextSubnet = uint32ToIp(nextNet32);
+
+            const type = determineIpType(ip);
+
+            // Valid Host IP Check logic
+            let isValidHost = 'ANO';
+            if (ip32 === net32) isValidHost = 'NE'; // Net ID
+            else if (ip32 === bcast32) isValidHost = 'NE'; // Broadcast
+            else if (type === 'Loopback' || type === 'Multicast' || type === 'APIPA' || type === 'Vyhrazená') isValidHost = 'NE';
+            else if (prefix >= 31) isValidHost = 'NE';
+
+            return { ip, prefix, net, first, last, bcast, nextSubnet, type, isValidHost, mask32, net32, bcast32, ip32 };
+        }
+
+        function renderInputOctets(containerId, rowKey) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            const interestingIndex = Math.floor((currentProblem.prefix - 1) / 8);
+
+            for (let i = 0; i < 4; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.maxLength = 3;
+                input.dataset.row = rowKey;
+                input.dataset.octet = i;
+                input.className = 'octet-input font-mono text-slate-800';
+                
+                // Check if auto-fill non-interesting octets is active
+                if (autoFillNonInteresting && i < interestingIndex) {
+                    input.value = currentProblem.net[i]; // Pre-fill network portion octets
+                    input.classList.add('bg-slate-100', 'text-slate-500');
+                }
+
+                input.addEventListener('input', (e) => {
+                    // Restrict to numbers
+                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                    
+                    // Auto-advance cursor
+                    if (e.target.value.length === 3 && i < 3) {
+                        const next = container.children[i * 2 + 2];
+                        if (next) next.focus();
+                    }
+
+                    if (autoCheckEnabled) checkRow(rowKey);
+                });
+
+                container.appendChild(input);
+
+                if (i < 3) {
+                    const dot = document.createElement('span');
+                    dot.className = 'text-slate-400 font-bold';
+                    dot.innerText = '.';
+                    container.appendChild(dot);
+                }
+            }
+        }
+
+        function setupInteractiveView() {
+            document.getElementById('target-ip-display').innerText = currentProblem.ip.join(' . ');
+            document.getElementById('target-prefix-display').innerText = currentProblem.prefix;
+
+            // Render Octet Inputs
+            renderInputOctets('input-container-net', 'net');
+            renderInputOctets('input-container-first', 'first');
+            renderInputOctets('input-container-last', 'last');
+            renderInputOctets('input-container-bcast', 'bcast');
+            renderInputOctets('input-container-next', 'next');
+
+            // Reset Select & Radio
+            document.getElementById('user-type-select').value = '';
+            const radios = document.getElementsByName('user-valid-host');
+            radios.forEach(r => r.checked = false);
+
+            // Reset Status & Answers
+            ['net', 'first', 'last', 'bcast', 'type', 'valid', 'next'].forEach(key => {
+                document.getElementById(`status-${key}`).innerHTML = `<span class="text-slate-300 font-bold">—</span>`;
+                document.getElementById(`answer-${key}`).innerHTML = `<span class="text-slate-300 italic">skryto</span>`;
+            });
+
+            // Hide explanation
+            document.getElementById('explanation-box').classList.add('hidden');
+        }
+
+        function generateNewProblem() {
+            const diff = document.getElementById('difficulty-select').value;
+            let ip, prefix;
+
+            if (diff === 'rfc' || Math.random() < 0.3) {
+                // Pick from curated list of interesting/trick problems
+                const randomPick = TRICK_PROBLEMS[Math.floor(Math.random() * TRICK_PROBLEMS.length)];
+                ip = [...randomPick.ip];
+                prefix = randomPick.prefix;
+            } else if (diff === 'standard') {
+                prefix = Math.floor(Math.random() * 7) + 24; // /24 to /30
+                ip = [
+                    [10, 172, 192, 197, 83, 142][Math.floor(Math.random() * 6)],
+                    Math.floor(Math.random() * 255),
+                    Math.floor(Math.random() * 255),
+                    Math.floor(Math.random() * 254) + 1
+                ];
+            } else if (diff === 'large') {
+                prefix = Math.floor(Math.random() * 16) + 8; // /8 to /23
+                ip = [
+                    Math.floor(Math.random() * 220) + 1,
+                    Math.floor(Math.random() * 255),
+                    Math.floor(Math.random() * 255),
+                    Math.floor(Math.random() * 255)
+                ];
+            } else {
+                prefix = Math.floor(Math.random() * 23) + 8; // /8 to /30
+                ip = [
+                    Math.floor(Math.random() * 220) + 1,
+                    Math.floor(Math.random() * 255),
+                    Math.floor(Math.random() * 255),
+                    Math.floor(Math.random() * 255)
+                ];
+            }
+
+            currentProblem = calculateSubnetDetails(ip, prefix);
+            setupInteractiveView();
+        }
+
+        function getUserOctetInput(key) {
+            const container = document.getElementById(`input-container-${key}`);
+            const inputs = container.querySelectorAll('.octet-input');
+            const octets = [];
+            let isValid = true;
+
+            inputs.forEach(input => {
+                if (input.value === '') isValid = false;
+                octets.push(parseInt(input.value, 10));
+            });
+
+            return isValid ? octets : null;
+        }
+
+        function checkRow(key) {
+            const statusCell = document.getElementById(`status-${key}`);
+            let isCorrect = false;
+
+            if (['net', 'first', 'last', 'bcast', 'next'].includes(key)) {
+                const userOctets = getUserOctetInput(key);
+                if (!userOctets) return false;
+
+                const expected = currentProblem[key === 'next' ? 'nextSubnet' : key];
+                isCorrect = userOctets.length === 4 && userOctets.every((val, idx) => val === expected[idx]);
+            } else if (key === 'type') {
+                const userVal = document.getElementById('user-type-select').value;
+                if (!userVal) return false;
+                isCorrect = userVal === currentProblem.type;
+            } else if (key === 'valid') {
+                const selectedRadio = document.querySelector('input[name="user-valid-host"]:checked');
+                if (!selectedRadio) return false;
+                isCorrect = selectedRadio.value === currentProblem.isValidHost;
+            }
+
+            statusCell.innerHTML = isCorrect
+                ? `<span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 font-bold"><i class="fa-solid fa-check"></i></span>`
+                : `<span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-rose-100 text-rose-600 font-bold"><i class="fa-solid fa-xmark"></i></span>`;
+
+            return isCorrect;
+        }
+
+        function toggleAnswer(key) {
+            const answerCell = document.getElementById(`answer-${key}`);
+            
+            let val = '';
+            if (['net', 'first', 'last', 'bcast'].includes(key)) {
+                val = currentProblem[key].join('.');
+            } else if (key === 'next') {
+                val = currentProblem.nextSubnet.join('.');
+            } else if (key === 'type') {
+                val = currentProblem.type === 'RFC1918' ? 'Soukromá (RFC 1918)' : currentProblem.type;
+            } else if (key === 'valid') {
+                val = currentProblem.isValidHost === 'ANO' ? 'ANO (Je platný host)' : 'NE (Není platný host)';
+            }
+
+            answerCell.innerHTML = `<span class="font-bold text-slate-800">${val}</span>`;
+        }
+
+        function showAllAnswers() {
+            ['net', 'first', 'last', 'bcast', 'type', 'valid', 'next'].forEach(k => toggleAnswer(k));
+        }
+
+        function checkAllAnswers() {
+            let correctCount = 0;
+            const keys = ['net', 'first', 'last', 'bcast', 'type', 'valid', 'next'];
+            
+            keys.forEach(k => {
+                if (checkRow(k)) correctCount++;
+            });
+
+            // Display dynamic explanation
+            const box = document.getElementById('explanation-box');
+            const content = document.getElementById('explanation-content');
+            box.classList.remove('hidden');
+
+            const interestingOctetIndex = Math.floor((currentProblem.prefix - 1) / 8);
+            const blockSize = Math.pow(2, 8 - (currentProblem.prefix % 8 === 0 ? 8 : currentProblem.prefix % 8));
+
+            content.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p><strong>• Maska sítě:</strong> <code class="font-mono bg-white px-1.5 py-0.5 rounded border border-blue-200">/${currentProblem.prefix}</code> = velkost bloku v ${interestingOctetIndex + 1}. oktetu je <strong>${blockSize}</strong>.</p>
+                        <p><strong>• Síťová adresa (Net-ID):</strong> Násobek ${blockSize} v daném oktetu &rarr; <code class="font-mono font-bold">${currentProblem.net.join('.')}</code>.</p>
+                        <p><strong>• Broadcast:</strong> Poslední adresa bloku před další sítí &rarr; <code class="font-mono font-bold">${currentProblem.bcast.join('.')}</code>.</p>
+                    </div>
+                    <div>
+                        <p><strong>• Typ IP:</strong> <span class="badge font-semibold text-blue-700">${currentProblem.type}</span> (podle předpisu RFC 1918 / IANA).</p>
+                        <p><strong>• Platný Host?:</strong> <strong class="${currentProblem.isValidHost === 'ANO' ? 'text-emerald-700' : 'text-rose-700'}">${currentProblem.isValidHost}</strong> ${
+                            currentProblem.isValidHost === 'ANO' 
+                            ? '(Zadaná IP leží uvnitř použitelného rozsahu mezi 1. a posledním hostem)' 
+                            : '(Zadaná IP adresa je buď síťová, broadcast, loopback, nebo leží mimo hostitelský rozsah!)'
+                        }.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleAutoFillToggle() {
+            autoFillNonInteresting = document.getElementById('auto-fill-checkbox').checked;
+            setupInteractiveView();
+        }
+
+        function toggleAutoCheck() {
+            autoCheckEnabled = document.getElementById('auto-check-checkbox').checked;
+        }
+
+        let tableData = [];
+
+        function generateTableWorksheet() {
+            const tbody = document.getElementById('table-worksheet-body');
+            tbody.innerHTML = '';
+            tableData = [];
+
+            // Combine fixed TRICK_PROBLEMS with randomized problems
+            const problemPool = [...TRICK_PROBLEMS];
+            
+            for (let i = 0; i < 10; i++) {
+                let prob;
+                if (i < TRICK_PROBLEMS.length) {
+                    prob = TRICK_PROBLEMS[i];
+                } else {
+                    const prefix = Math.floor(Math.random() * 16) + 14;
+                    const ip = [10, 172, 192, 11, 169, 127][Math.floor(Math.random() * 6)];
+                    prob = { ip: [ip, Math.floor(Math.random()*255), Math.floor(Math.random()*255), Math.floor(Math.random()*255)], prefix };
+                }
+
+                const details = calculateSubnetDetails(prob.ip, prob.prefix);
+                tableData.push(details);
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-3 px-3 text-center font-bold text-slate-400">${i + 1}</td>
+                    <td class="py-3 px-4 font-mono font-bold text-blue-900">${details.ip.join('.')}/${details.prefix}</td>
+                    <td class="py-3 px-4">
+                        <input type="text" id="tw-net-${i}" placeholder="e.g. ${details.net[0]}.x.x.x" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 font-mono text-xs focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+                    </td>
+                    <td class="py-3 px-4">
+                        <input type="text" id="tw-first-${i}" placeholder="1. Host" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 font-mono text-xs focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+                    </td>
+                    <td class="py-3 px-4">
+                        <input type="text" id="tw-last-${i}" placeholder="Posl. Host" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 font-mono text-xs focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+                    </td>
+                    <td class="py-3 px-4">
+                        <input type="text" id="tw-bcast-${i}" placeholder="Broadcast" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 font-mono text-xs focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+                    </td>
+                    <td class="py-3 px-4">
+                        <select id="tw-type-${i}" class="w-full bg-slate-50 border border-slate-300 rounded px-1.5 py-1 text-xs focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+                            <option value="">-- Typ --</option>
+                            <option value="RFC1918">Soukromá (RFC1918)</option>
+                            <option value="Veřejná">Veřejná</option>
+                            <option value="Loopback">Loopback</option>
+                            <option value="APIPA">APIPA</option>
+                            <option value="Multicast">Multicast</option>
+                        </select>
+                    </td>
+                    <td class="py-3 px-3 text-center">
+                        <select id="tw-valid-${i}" class="w-full bg-slate-50 border border-slate-300 rounded px-1.5 py-1 text-xs focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+                            <option value="">-?</option>
+                            <option value="ANO">ANO</option>
+                            <option value="NE">NE</option>
+                        </select>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            document.getElementById('table-score-card').classList.add('hidden');
+        }
+
+        function gradeTableWorksheet() {
+            let totalPoints = 0;
+            const maxPoints = tableData.length * 6; // 6 columns evaluated per row
+            let scoreDetailsHtml = '';
+
+            tableData.forEach((item, i) => {
+                const userNet = (document.getElementById(`tw-net-${i}`).value || '').trim();
+                const userFirst = (document.getElementById(`tw-first-${i}`).value || '').trim();
+                const userLast = (document.getElementById(`tw-last-${i}`).value || '').trim();
+                const userBcast = (document.getElementById(`tw-bcast-${i}`).value || '').trim();
+                const userType = document.getElementById(`tw-type-${i}`).value;
+                const userValid = document.getElementById(`tw-valid-${i}`).value;
+
+                const expectedNet = item.net.join('.');
+                const expectedFirst = item.first.join('.');
+                const expectedLast = item.last.join('.');
+                const expectedBcast = item.bcast.join('.');
+                const expectedType = item.type;
+                const expectedValid = item.isValidHost;
+
+                // Mark Inputs visual feedback
+                markWorksheetInput(`tw-net-${i}`, userNet === expectedNet);
+                markWorksheetInput(`tw-first-${i}`, userFirst === expectedFirst);
+                markWorksheetInput(`tw-last-${i}`, userLast === expectedLast);
+                markWorksheetInput(`tw-bcast-${i}`, userBcast === expectedBcast);
+                markWorksheetInput(`tw-type-${i}`, userType === expectedType);
+                markWorksheetInput(`tw-valid-${i}`, userValid === expectedValid);
+
+                let rowPoints = 0;
+                if (userNet === expectedNet) rowPoints++;
+                if (userFirst === expectedFirst) rowPoints++;
+                if (userLast === expectedLast) rowPoints++;
+                if (userBcast === expectedBcast) rowPoints++;
+                if (userType === expectedType) rowPoints++;
+                if (userValid === expectedValid) rowPoints++;
+
+                totalPoints += rowPoints;
+
+                scoreDetailsHtml += `
+                    <div class="flex items-center justify-between py-1 border-b border-slate-100 text-xs">
+                        <span class="font-mono font-semibold text-slate-800">#${i + 1} (${item.ip.join('.')}/${item.prefix})</span>
+                        <span>Správně: <strong>${rowPoints}/6</strong> | Net: <span class="font-mono">${expectedNet}</span> | Typ: <strong>${expectedType}</strong> | Platný Host: <strong>${expectedValid}</strong></span>
+                    </div>
+                `;
+            });
+
+            const percent = Math.round((totalPoints / maxPoints) * 100);
+            const scoreCard = document.getElementById('table-score-card');
+            const scoreTitle = document.getElementById('table-score-title');
+            const scoreText = document.getElementById('table-score-text');
+            const scoreDetails = document.getElementById('table-score-details');
+
+            scoreTitle.innerText = percent >= 80 ? 'Skvělý výsledek! 🎉' : percent >= 50 ? 'Dobrá práce 👍' : 'Chce to ještě procvičovat 💡';
+            scoreText.innerText = `Získali jste ${totalPoints} z ${maxPoints} bodů (${percent}%).`;
+            scoreDetails.innerHTML = scoreDetailsHtml;
+
+            scoreCard.classList.remove('hidden');
+            scoreCard.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function markWorksheetInput(id, isCorrect) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (isCorrect) {
+                el.classList.remove('bg-slate-50', 'border-slate-300', 'border-rose-400', 'bg-rose-50');
+                el.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-900', 'font-semibold');
+            } else {
+                el.classList.remove('bg-slate-50', 'border-slate-300', 'bg-emerald-50', 'border-emerald-500');
+                el.classList.add('bg-rose-50', 'border-rose-400', 'text-rose-900', 'font-semibold');
+            }
+        }
+
+        function switchMode(mode) {
+            ['interactive', 'table', 'calculator'].forEach(m => {
+                const view = document.getElementById(`view-${m}`);
+                const tab = document.getElementById(`tab-${m}`);
+
+                if (m === mode) {
+                    view.classList.remove('hidden');
+                    tab.className = 'px-4 py-1.5 rounded-lg transition-all shadow-sm bg-white text-blue-600 font-semibold';
+                } else {
+                    view.classList.add('hidden');
+                    tab.className = 'px-4 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900';
+                }
+            });
+
+            if (mode === 'table' && tableData.length === 0) {
+                generateTableWorksheet();
+            }
+        }
+
+        window.onload = function() {
+            currentProblem = calculateSubnetDetails([197, 240, 201, 173], 27);
+            setupInteractiveView();
+        };
+    </script>
+</body>
+</html>
